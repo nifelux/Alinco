@@ -1,0 +1,11 @@
+{
+  "name": "Schweppes",
+  "version": "1.0.0",
+  "description": "Schweppes Investment Platform",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
