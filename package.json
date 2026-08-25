@@ -1,11 +1,14 @@
 {
-  "name": "Schweppes",
+  "name": "alinco-oil-investments",
   "version": "1.0.0",
-  "description": "Schweppes Investment Platform",
+  "description": "Alinco Oil Investments public and account platform",
   "scripts": {
     "build": "echo 'No build step required'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0"
+  },
+  "engines": {
+    "node": ">=22 <23"
   }
 }
