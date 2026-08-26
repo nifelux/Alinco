@@ -59,7 +59,7 @@
   </div>
   <div class="checkin-card">
     <div class="checkin-icon" id="checkinIcon"><svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
-    <div class="checkin-amount">₦50</div>
+    <div class="checkin-amount" id="checkinAmount">₦50</div>
     <div class="checkin-label">Daily refinery briefing bonus — check in each day!</div>
     <button class="checkin-btn" id="checkinBtn" onclick="doCheckin()">Claim ₦50 Bonus</button>
     <div class="streak-row" id="streakRow"></div>
@@ -82,19 +82,19 @@
   var GIFT_ICON='<svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>';
   var CHECK_ICON='<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
   var CHECK_SMALL='<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+  var dailyAmount=50;
 
-  function waitSb(cb){if(window.sb&&window.AradelAuth){cb();return;}var t=setInterval(function(){if(window.sb&&window.AradelAuth){clearInterval(t);cb();}},50);}
-  waitSb(async function(){
-    var s=await window.AradelAuth.requireAuth(); if(!s)return;
-    uid=s.user.id;
-    var r=await fetch("/api/bonus?action=checkin-status&user_id="+uid);
-    var d=await r.json();
-    var btn=document.getElementById("checkinBtn");
-    if(d.claimed){ btn.innerHTML=CHECK_SMALL+' Already Claimed Today'; btn.disabled=true; document.getElementById("checkinIcon").innerHTML=CHECK_ICON; }
-
-    var {data:hist}=await window.sb.from("daily_checkins").select("date").eq("user_id",uid).order("date",{ascending:false}).limit(30);
+  function money(amount){ return window.AradelAuth.money(Number(amount||0)); }
+  function setDailyAmount(amount){
+    dailyAmount=Number(amount||50);
+    document.getElementById("checkinAmount").textContent=money(dailyAmount);
+    if(!document.getElementById("checkinBtn").disabled) document.getElementById("checkinBtn").textContent="Claim "+money(dailyAmount)+" Bonus";
+  }
+  async function loadHistory(){
+    var {data:hist}=await window.sb.from("daily_checkins").select("date,amount").eq("user_id",uid).order("date",{ascending:false}).limit(30);
     var claimedDates=new Set((hist||[]).map(function(x){return x.date;}));
     var streakEl=document.getElementById("streakRow");
+    streakEl.innerHTML="";
     var days=["Su","Mo","Tu","We","Th","Fr","Sa"];
     for(var i=6;i>=0;i--){
       var dt=new Date(); dt.setDate(dt.getDate()-i);
@@ -107,14 +107,26 @@
     }
     var histEl=document.getElementById("checkinHistory");
     if(!hist||!hist.length){ histEl.innerHTML='<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:12px">No check-ins yet.</div>'; }
-    else { histEl.innerHTML=hist.slice(0,7).map(function(c){ return '<div class="ci-row"><span class="ci-row-date">'+new Date(c.date).toDateString()+'</span><span class="ci-row-amt">+₦50</span></div>'; }).join(""); }
+    else { histEl.innerHTML=hist.slice(0,7).map(function(c){ return '<div class="ci-row"><span class="ci-row-date">'+new Date(c.date).toDateString()+'</span><span class="ci-row-amt">+'+money(c.amount)+'</span></div>'; }).join(""); }
+  }
+
+  function waitSb(cb){if(window.sb&&window.AradelAuth){cb();return;}var t=setInterval(function(){if(window.sb&&window.AradelAuth){clearInterval(t);cb();}},50);}
+  waitSb(async function(){
+    var s=await window.AradelAuth.requireAuth(); if(!s)return;
+    uid=s.user.id;
+    var r=await fetch("/api/bonus?action=checkin-status&user_id="+uid);
+    var d=await r.json();
+    setDailyAmount(d.amount);
+    var btn=document.getElementById("checkinBtn");
+    if(d.claimed){ btn.innerHTML=CHECK_SMALL+' Already Claimed Today'; btn.disabled=true; document.getElementById("checkinIcon").innerHTML=CHECK_ICON; }
+    await loadHistory();
   });
   window.doCheckin=async function(){
     var btn=document.getElementById("checkinBtn"); btn.disabled=true; btn.textContent="Claiming…";
     var r=await fetch("/api/bonus?action=daily-checkin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:uid})});
     var d=await r.json();
-    if(d.ok){ window.AradelAuth.toast("Claimed ₦50 daily bonus!"); btn.innerHTML=CHECK_SMALL+' Claimed!'; document.getElementById("checkinIcon").innerHTML=CHECK_ICON; }
-    else { window.AradelAuth.toast(d.error==="already_claimed"?"Already claimed today!":d.error||"Error"); btn.disabled=false; btn.textContent="Claim ₦50 Bonus"; }
+    if(d.ok){ setDailyAmount(d.amount); window.AradelAuth.toast("Claimed "+money(d.amount)+" daily bonus!"); btn.innerHTML=CHECK_SMALL+' Claimed!'; document.getElementById("checkinIcon").innerHTML=CHECK_ICON; await loadHistory(); }
+    else { window.AradelAuth.toast(d.error==="already_claimed"?"Already claimed today!":d.error==="daily_bonus_disabled"?"Daily bonus is not currently available.":d.error||"Error"); btn.disabled=false; btn.textContent="Claim "+money(dailyAmount)+" Bonus"; }
   };
 })();
 </script>
