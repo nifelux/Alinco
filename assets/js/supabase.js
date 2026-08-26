@@ -2,8 +2,8 @@
    ⚠️ PUT YOUR REAL SUPABASE CREDENTIALS BELOW
    Supabase Dashboard → Settings → API */
 (function () {
-  var SUPABASE_URL  = "https://pidabyudcwwcpmfnujmd.supabase.co";      // https://xxxx.supabase.co
-  var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpZGFieXVkY3d3Y3BtZm51am1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyODM1MDcsImV4cCI6MjA5OTg1OTUwN30.PjUW68xz_i2ZlYIkuqpGP5hFZxU_U8mjix-35xCbfBQ";  // eyJhbGci...
+  var SUPABASE_URL  = "https://aqsjnqikeeycqccrewpn.supabase.co";      // https://xxxx.supabase.co
+  var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxc2pucWlrZWV5Y3FjY3Jld3BuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2ODE2NzAsImV4cCI6MjEwMzI1NzY3MH0.l8eA4RRScwmzKkOP5Sd9bZHugB0LlkTnsa7NGJIbi1c";  // eyJhbGci...
 
   if (!SUPABASE_URL || SUPABASE_URL === "YOUR_SUPABASE_URL") {
     console.error("❌ ARADEL: Supabase not configured. Edit assets/js/supabase.js");
