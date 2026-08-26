@@ -25,9 +25,9 @@
     .gift-kicker:before { content:""; width:26px; height:2px; background:var(--gold); }
     .gift-emblem { display:grid; place-items:center; width:64px; height:64px; margin-bottom:20px; border:1px solid rgba(255,255,255,.26); border-radius:20px; background:rgba(0,29,53,.19); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 15px 34px rgba(0,19,35,.21); }
     .gift-emblem svg { width:34px; height:34px; stroke:var(--gold); stroke-width:1.6; fill:none; }
-    .gift-hero h1 { max-width:390px; margin:0; color:#fff; font-family:Fraunces,serif; font-size:31px; line-height:1.08; font-weight:600; letter-spacing:-.035em; }
-    .gift-hero p { max-width:355px; margin:12px 0 0; color:#d7e8f1; font-size:14px; line-height:1.55; }
-    .gift-register { display:flex; align-items:center; gap:10px; margin-top:25px; color:#e5f0f6; font-size:11px; font-weight:700; letter-spacing:.02em; }
+    .gift-hero h1 { max-width:390px; margin:0; color:#fff!important; font-family:Fraunces,serif; font-size:31px; line-height:1.08; font-weight:600; letter-spacing:-.035em; }
+    .gift-hero p { max-width:355px; margin:12px 0 0; color:#d7e8f1!important; font-size:14px; line-height:1.55; }
+    .gift-register { display:flex; align-items:center; gap:10px; margin-top:25px; color:#e5f0f6!important; font-size:11px; font-weight:700; letter-spacing:.02em; }
     .gift-register svg { width:16px; height:16px; color:var(--gold); }
     .gift-main { position:relative; margin-top:-17px; padding:0 16px 42px; }
     .redeem-panel { position:relative; z-index:2; padding:23px 20px 20px; border:1px solid rgba(211,223,229,.9); border-radius:21px; background:#fff; box-shadow:0 17px 45px rgba(15,56,82,.11); }
@@ -126,6 +126,7 @@
   <script>
   (function(){
     var uid="";
+    var accessToken="";
     var button=document.getElementById("redeemButton");
     var countEl=document.getElementById("historyCount");
     var register=document.getElementById("redemptions");
@@ -136,17 +137,26 @@
     function showEmpty(){setCount(0);register.innerHTML='<div class="history-empty">'+emptyMark+'<strong>No rewards registered yet</strong><span>Redeem an eligible code to add your first account reward.</span></div>';}
     async function loadRedemptions(){
       register.innerHTML='<div class="history-loading"><span class="history-spinner"></span>LOADING REGISTER</div>';
-      var result=await window.sb.from("gift_code_redemptions").select("id,amount,created_at,gift_codes(code)").eq("user_id",uid).order("created_at",{ascending:false});
-      if(result.error){
+      var response;
+      var result;
+      try {
+        response=await fetch("/api/bonus?action=gift-history",{headers:{"Authorization":"Bearer "+accessToken}});
+        result=await response.json();
+      } catch(error) {
         setCount(0);
         register.innerHTML='<div class="history-error"><strong>We could not load your reward register.</strong><button type="button" onclick="window.reloadGiftHistory()">Try again</button></div>';
         return;
       }
-      var records=result.data||[];
+      if(!response.ok || !result.ok){
+        setCount(0);
+        register.innerHTML='<div class="history-error"><strong>We could not load your reward register.</strong><button type="button" onclick="window.reloadGiftHistory()">Try again</button></div>';
+        return;
+      }
+      var records=result.records||[];
       if(!records.length){showEmpty();return;}
       setCount(records.length);
       register.innerHTML=records.map(function(item){
-        var code=item.gift_codes&&item.gift_codes.code?item.gift_codes.code:"REWARD CREDIT";
+        var code=item.code||"REWARD CREDIT";
         return '<article class="redemption-item"><div class="redemption-meta"><div class="redemption-code">'+escapeHtml(code)+'</div><div class="redemption-date">'+escapeHtml(window.AradelAuth.timeAgo(item.created_at))+'</div></div><div class="redemption-amount">'+escapeHtml(window.AradelAuth.money(item.amount))+'</div></article>';
       }).join("");
     }
@@ -154,6 +164,7 @@
     waitSb(async function(){
       var session=await window.AradelAuth.requireAuth(); if(!session)return;
       uid=session.user.id;
+      accessToken=session.access_token;
       await loadRedemptions();
     });
     window.redeem=async function(){
