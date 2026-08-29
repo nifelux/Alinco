@@ -4,7 +4,8 @@
  * POST ?action=add-bank-card
  * POST ?action=delete-bank-card
  * GET  ?action=bank-cards&user_id=
- * GET  ?action=my-products&user_id=  (read-only — cron owns all crediting)
+ * GET  ?action=my-products&user_id=
+ * POST ?action=collect-income  (credits due package income)
  */
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -34,6 +35,15 @@ module.exports = async function(req, res) {
   }
 
   if(req.method!=="POST") return res.status(405).json({ error:"Method not allowed" });
+
+  if(action==="collect-income") {
+    const { data, error } = await supabase.rpc("collect_package_income_for_user", {
+      p_user_id: user_id,
+      p_collection_date: new Date().toISOString().slice(0, 10),
+    });
+    if(error) return res.status(500).json({ error:error.message });
+    return res.json(data || { ok:false, error:"income_collection_failed" });
+  }
 
   if(action==="update-profile") {
     const { full_name, phone } = req.body;
