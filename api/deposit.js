@@ -12,6 +12,7 @@ const {
   initiatePayment,
   verifyPayment,
 } = require("../lib/targetgrowths");
+const { sendTelegramMessage, escapeHtml } = require("../lib/telegram");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const MONNIFY_BASE = process.env.MONNIFY_BASE_URL || "https://api.monnify.com";
@@ -369,6 +370,13 @@ module.exports = async function handler(req, res) {
       status: "pending", method: "manual", provider: "manual", created_at: new Date().toISOString(),
     });
     if (error) return res.status(500).json({ error: error.message });
+    try {
+      await sendTelegramMessage(
+        `<b>New Alinco deposit pending</b>\nAmount: ₦${num.toLocaleString()}\nSender: ${escapeHtml(sender_name.trim())}\nReference: <code>${escapeHtml(reference)}</code>`
+      );
+    } catch (telegramError) {
+      console.error("[telegram-deposit-notification]", telegramError.message);
+    }
     const bankDetails = await getManualBankDetails();
     return res.json({ ok: true, reference, narration, amount: num, ...bankDetails });
   }
