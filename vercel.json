@@ -1,5 +1,13 @@
 {
   "version": 2,
+  "functions": {
+    "api/*.js": {
+      "memory": 512,
+      "maxDuration": 10
+    }
+  },
+  "outputDirectory": ".",
+  "buildCommand": "",
   "headers": [
     {
       "source": "/api/(.*)",
@@ -8,6 +16,12 @@
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron-income",
+      "schedule": "0 0 * * *"
     }
   ]
 }
