@@ -8,6 +8,19 @@
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+function isWithdrawalWindowOpen(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Lagos",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value || 0);
+  const minutes = hour * 60 + minute;
+  return minutes >= 720 && minutes < 1020;
+}
+
 module.exports = async function(req, res) {
   res.setHeader("Access-Control-Allow-Origin","*");
   res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");
@@ -46,6 +59,16 @@ module.exports = async function(req, res) {
   // place — the request_withdrawal() Postgres function — so the admin
   // toggles actually take effect and there's no read-then-write race
   // on the wallet balance.
+  if (!isWithdrawalWindowOpen()) {
+    return res.json({
+      ok: false,
+      error: "withdrawal_window_closed",
+      opens_at: "12:00",
+      closes_at: "17:00",
+      timezone: "Africa/Lagos",
+    });
+  }
+
   const requestStartedAt = new Date().toISOString();
   const { data, error } = await supabase.rpc("request_withdrawal", {
     p_user_id: user_id,
@@ -64,6 +87,7 @@ module.exports = async function(req, res) {
       investment_required:  "You need an active investment before you can withdraw.",
       active_referral_required: "You need at least one referral who has made a purchase before you can withdraw.",
       insufficient_balance: "Insufficient balance",
+      withdrawal_window_closed: "Withdrawals are open daily from 12:00 PM to 5:00 PM Nigeria time.",
     };
     return res.json({ ok:false, error: messages[data?.error] || data?.error || "Withdrawal failed" });
   }
