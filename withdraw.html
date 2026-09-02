@@ -26,6 +26,7 @@
 
   <div class="section">
     <div id="alert" class="alert"></div>
+    <div id="withdrawWindowBanner" style="background:var(--red-tint);border:1px solid var(--red);border-radius:12px;padding:12px 14px;margin-bottom:16px;color:var(--ink);font-size:13px;font-weight:600;text-align:center"></div>
     <div id="lockedBanner" style="display:none;background:var(--danger-bg);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-align:center">
       <div style="font-size:14px;font-weight:700;color:var(--danger)">🔒 Payout requests are temporarily paused</div>
       <div style="font-size:12px;color:var(--danger);margin-top:4px">Please check back later, or contact customer service.</div>
@@ -54,9 +55,26 @@
 <script src="assets/js/auth.js" defer></script>
 <script>
 (function(){
-  var uid="",balance=0,selectedCard=null,showManual=false,minW=1000,maxW=0;
+  var uid="",balance=0,selectedCard=null,showManual=false,minW=1000,maxW=0,adminLocked=false,withdrawWindowOpen=false;
+  function withdrawalWindowState(){
+    var parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Lagos",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+    var hour=Number(parts.find(function(p){return p.type==="hour";})?.value||0);
+    var minute=Number(parts.find(function(p){return p.type==="minute";})?.value||0);
+    var total=hour*60+minute;
+    return {open:total>=720&&total<1020};
+  }
+  function refreshWithdrawalWindow(){
+    var state=withdrawalWindowState(),banner=document.getElementById("withdrawWindowBanner"),btn=document.getElementById("withdrawBtn");
+    withdrawWindowOpen=state.open;
+    if(state.open){banner.textContent="Withdrawals are open now · 12:00 PM–5:00 PM Nigeria time (WAT)";banner.style.background="var(--green-tint)";banner.style.borderColor="var(--success)";}
+    else {banner.textContent="Withdrawals are available daily from 12:00 PM to 5:00 PM Nigeria time (WAT).";banner.style.background="var(--red-tint)";banner.style.borderColor="var(--red)";}
+    if(!adminLocked){btn.disabled=!state.open;btn.textContent=state.open?"Request Payout":"Payout Window Closed";}
+  }
   function waitSb(cb){if(window.sb&&window.AradelAuth){cb();return;}var t=setInterval(function(){if(window.sb&&window.AradelAuth){clearInterval(t);cb();}},50);}
 
+  refreshWithdrawalWindow();
+  window.addEventListener("focus",refreshWithdrawalWindow);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshWithdrawalWindow();});
   waitSb(async function(){
     var s=await window.AradelAuth.requireAuth(); if(!s)return;
     uid=s.user.id;
@@ -65,6 +83,7 @@
       var lockRes=await fetch("/api/withdraw?action=lock-status");
       var lockData=await lockRes.json();
       if(lockData.locked){
+        adminLocked=true;
         document.getElementById("lockedBanner").style.display="block";
         document.getElementById("withdrawBtn").disabled=true;
         document.getElementById("withdrawBtn").textContent="Payout Requests Paused";
@@ -109,7 +128,9 @@
   };
 
   window.doWithdraw=async function(){
+    refreshWithdrawalWindow();
     var btn=document.getElementById("withdrawBtn"); var al=document.getElementById("alert");
+    if(!withdrawWindowOpen){ al.textContent="Withdrawals are open daily from 12:00 PM to 5:00 PM Nigeria time."; al.className="alert alert-error show"; return; }
     var amt=Number(document.getElementById("amount").value);
     al.className="alert";
     if(!amt||amt<minW){ al.textContent="Minimum withdrawal is ₦"+minW.toLocaleString(); al.className="alert alert-error show"; return; }
@@ -131,7 +152,7 @@
       balance-=amt; document.getElementById("balance").textContent=window.AradelAuth.money(balance);
     } else {
       al.textContent=d.error||"Error processing request"; al.className="alert alert-error show";
-      btn.disabled=false; btn.textContent="Request Payout";
+      btn.disabled=false; btn.textContent=withdrawWindowOpen?"Request Payout":"Payout Window Closed";
     }
   };
 })();
